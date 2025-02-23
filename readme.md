@@ -32,7 +32,7 @@ pip install -r requirements.txt
 ```bash
 GEMINI_API_KEY = 'your-api-key'
 ```
-
+### Run the sql.py for Database Creation - Optional
 ### 4️ Run the Application
 ```bash
 streamlit run app.py
