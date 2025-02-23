@@ -10,6 +10,7 @@ from langchain.memory import ConversationBufferMemory
 from pydantic import BaseModel
 from langchain.output_parsers import PydanticOutputParser
 
+# Load API Key
 load_dotenv()
 gemini_api_key = os.getenv("GEMINI_API_KEY")
 genai.configure(api_key=gemini_api_key)
@@ -55,13 +56,9 @@ class SQLQuery(BaseModel):
 class FlightBooking:
     def __init__(self):
         self.llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", google_api_key=gemini_api_key)
-        self.prompt_template = """
-        You are an AI-powered travel assistant designed to help users find and book flights effortlessly.
-        Your role is to engage in a natural conversation, gather necessary details, and retrieve relevant flight options based on user inputs
-        User Query: {query}
-        Note : Only respond to the user based on the knowledge you know about the database and services mentioned above.Don't responde behind it
-        """
+       
         self.sql_query_template = """
+        
         Convert the following English question into an SQL query for a SQLite database.
 
         The database schema:
@@ -100,15 +97,11 @@ class FlightBooking:
         """
 
         self.parser = PydanticOutputParser(pydantic_object=SQLQuery)
-    def llm_response(self, query):
-        prompt = self.prompt_template.format(query=query)
-        response = self.llm.invoke(prompt)  
-        return response.text 
+    
 
     def llm_generate_sql(self, query):
         prompt = self.sql_query_template.format(query=query)
         response = self.llm.invoke(prompt) 
-        print(response.text ) 
         return response.content 
 
     def execute_sql(self, query):
@@ -116,29 +109,24 @@ class FlightBooking:
         parsed_output = self.parser.parse(sql_query)
         sql_query = parsed_output.query
         sql_query = sql_query.lower()
-        print("Generated SQL Query:", sql_query)
 
         with get_db_connection() as conn:
             cur = conn.cursor()
             db_response = cur.execute(sql_query).fetchall()
+        res = [dict(row) for row in db_response] 
+        return self.llm_response(query,res)
         
-        return [dict(row) for row in db_response]  
+    def llm_response(self,question,response):
+        prompt = f"""You are an AI-powered travel assistant designed to help users find and book flights effortlessly.
+        Your role is to engage in a natural conversation, gather necessary details, and retrieve relevant flight options based on user inputs
+        user Query : {question}, data from database : {response}
+        if the data from database iss null  asks the user to provide more information about the flight and booking details
+        don't reveal any information about database or any secrets"""
+        llm_response = self.llm.invoke(prompt) 
+        print(prompt)
+        return llm_response.content
 
-    def agent_run(self, query):
-        tools = [
-            Tool(name="Flight and Booking Status", description="Check flight and booking details", func=self.execute_sql),
-            Tool(name="Conversational Chat", description="General flight booking inquiries", func=self.llm_response)
-        ]
-
-        agent = initialize_agent(
-            tools=tools,
-            llm=self.llm,
-            agent_type="zero-shot-react-description",
-            memory=ConversationBufferMemory(memory_key="chat_history"),
-            verbose=True
-        )
-
-        return agent.run(query)
+    
 
 st.set_page_config(page_title="Flight Booking Chatbot")
 st.title("✈️ Flight Booking Chatbot")
@@ -167,7 +155,7 @@ with st.sidebar:
     if st.button("Book Now"):
         success, message, booking_id = book_flight(flight_id, passenger_name.lower(), seat_class, num_seats)
         print(booking_id)
-        st.success(f"{message} 🎉 Your Booking ID is: **{booking_id}**")
+        st.success(f"{message}  Your Booking ID is: **{booking_id}**")
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -184,7 +172,7 @@ if user_input:
         st.markdown(user_input)
 
     chatbot = FlightBooking()
-    response = chatbot.agent_run(user_input)
+    response = chatbot.execute_sql(user_input)
 
     st.session_state.messages.append({"role": "assistant", "content": response})
     with st.chat_message("assistant"):
