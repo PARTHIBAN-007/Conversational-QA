@@ -35,7 +35,7 @@ GEMINI_API_KEY = 'your-api-key'
 ### Run the sql.py for Database Creation - Optional
 ### 4️ Run the Application
 ```bash
-streamlit run main.py
+streamlit run app.py
 ```
 
 ##  Usage
