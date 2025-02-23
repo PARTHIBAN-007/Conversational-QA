@@ -19,8 +19,8 @@ The **Flight Booking Assistant** is a chatbot-based application that allows user
 ##  Setup & Installation
 ### 1️ Clone the Repository
 ```bash
-git clone https://github.com/your-repo/flight-booking-assistant.git
-cd flight-booking-assistant
+git clone https://github.com/PARTHIBAN-007/Conversational-QA.git
+cd Conversational-QA
 ```
 ### 2️ Install Dependencies
 ```bash
