@@ -1,4 +1,2 @@
 .env
-agent.py
 app.py
-text_to_sql.py
