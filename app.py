@@ -9,8 +9,8 @@ import os
 from langchain.memory import ConversationBufferMemory
 from pydantic import BaseModel
 from langchain.output_parsers import PydanticOutputParser
-
-# Load API Key
+from langchain.chains import LLMChain
+from langchain.prompts import PromptTemplate
 load_dotenv()
 gemini_api_key = os.getenv("GEMINI_API_KEY")
 genai.configure(api_key=gemini_api_key)
@@ -56,7 +56,7 @@ class SQLQuery(BaseModel):
 class FlightBooking:
     def __init__(self):
         self.llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", google_api_key=gemini_api_key)
-       
+        
         self.sql_query_template = """
         
         Convert the following English question into an SQL query for a SQLite database.
@@ -95,6 +95,15 @@ class FlightBooking:
         **User Query:** {query}
         Only return the SQL query in JSON format: {{"query": "SQL_QUERY_HERE"}}
         """
+        prompt = """You are an AI-powered travel assistant designed to help users find and book flights effortlessly.
+        Your role is to engage in a natural conversation, gather necessary details, and retrieve relevant flight options based on user inputs
+        user Query : {question}, data from database : {response}
+        if the data from database iss null  asks the user to provide more information about the flight and booking details
+        don't reveal any information about database or any secrets"""
+        self.prompt_template = PromptTemplate(input_variables=["question","response"],template=prompt)
+        self.memory = ConversationBufferMemory(input_key="question")
+
+        self.chain = LLMChain(llm = self.llm,memory = self.memory,prompt = self.prompt_template)
 
         self.parser = PydanticOutputParser(pydantic_object=SQLQuery)
     
@@ -116,15 +125,10 @@ class FlightBooking:
         res = [dict(row) for row in db_response] 
         return self.llm_response(query,res)
         
-    def llm_response(self,question,response):
-        prompt = f"""You are an AI-powered travel assistant designed to help users find and book flights effortlessly.
-        Your role is to engage in a natural conversation, gather necessary details, and retrieve relevant flight options based on user inputs
-        user Query : {question}, data from database : {response}
-        if the data from database iss null  asks the user to provide more information about the flight and booking details
-        don't reveal any information about database or any secrets"""
-        llm_response = self.llm.invoke(prompt) 
-        print(prompt)
-        return llm_response.content
+    def llm_response(self,question,response): 
+        llm_response = self.chain.invoke({"question": question, "response": response})    
+        print(llm_response)
+        return llm_response["text"]
 
     
 
@@ -154,8 +158,10 @@ with st.sidebar:
 
     if st.button("Book Now"):
         success, message, booking_id = book_flight(flight_id, passenger_name.lower(), seat_class, num_seats)
-        print(booking_id)
-        st.success(f"{message}  Your Booking ID is: **{booking_id}**")
+        if success:
+            st.success(f"{message}  Your Booking ID is: **{booking_id}**")
+        else:
+            st.warning(f"{message}")
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
