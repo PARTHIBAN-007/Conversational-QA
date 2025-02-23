@@ -1,4 +1,7 @@
-python-dotenv
-streamlit
-langchain
 google-generativeai
+streamlit
+sqlite3
+python-dotenv
+langchain
+langchain-google-genai
+pydantic
