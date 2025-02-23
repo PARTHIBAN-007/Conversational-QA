@@ -9,6 +9,7 @@ The **Flight Booking Assistant** is a chatbot-based application that allows user
 - **Chatbot Integration**: Uses `LangChain` and `Google Gemini API` to handle user inquiries.
 - **Database Management**: Stores flights and bookings using `SQLite`.
 
+<a href = "https://drive.google.com/file/d/1Ym8MXaKGZomNVUBV6_8ihg9YG3i82hBv/view?usp=drive_link">watch demo video</a>
 
 ##  Tech Stack
 - **Frontend**: `Streamlit`
